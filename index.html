@@ -1,263 +1,254 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Kredit Kalkulyatori</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/telegram-web-app/7.0.0/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .calculator {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-        input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        button {
-            background: #2481cc;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            width: 100%;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-        button:hover {
-            background: #1e6fb0;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        .result p {
-            margin: 5px 0;
-            font-size: 15px;
-        }
-        .schedule-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .schedule-table th, .schedule-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: right;
-        }
-        .schedule-table th {
-            background: #f8f9fa;
-            text-align: center;
-        }
-        .down-payment-info {
-            background: #e8f4ff;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    <div class="calculator">
-        <div class="input-group">
-            <label>Umumiy summa (so'm)</label>
-            <input type="number" id="totalAmount" placeholder="Misol: 100000000" onchange="updateDownPayment()">
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+
+const CreditCalculator = () => {
+  const [loading, setLoading] = useState(true);
+  const [amount, setAmount] = useState('');
+  const [downPaymentPercent, setDownPaymentPercent] = useState('');
+  const [term, setTerm] = useState('');
+  const [gracePeriod, setGracePeriod] = useState('');
+  const [yearlyRate, setYearlyRate] = useState('');
+  const [payments, setPayments] = useState([]);
+  const [yearlyTotals, setYearlyTotals] = useState([]);
+  const [totalPayment, setTotalPayment] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const calculatePayments = () => {
+    const downPaymentAmount = (Number(amount) * Number(downPaymentPercent)) / 100;
+    const principal = Number(amount) - downPaymentAmount;
+    const monthlyRate = (Number(yearlyRate) / 12) / 100;
+    const totalMonths = Number(term) * 12;
+    const graceMonths = Number(gracePeriod);
+
+    let monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
+                        (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
+    let payments = [];
+    let balance = principal;
+    let yearTotal = 0;
+    let yearlyTotals = [];
+    let currentYear = 1;
+    let yearCount = 0;
+
+    for (let month = 1; month <= totalMonths + graceMonths; month++) {
+      if (month <= graceMonths) {
+        const interest = balance * monthlyRate;
+        payments.push({
+          month,
+          payment: interest,
+          interest,
+          principal: 0,
+          balance
+        });
+        yearTotal += interest;
+      } else {
+        const interest = balance * monthlyRate;
+        const principalPart = monthlyPayment - interest;
+        balance -= principalPart;
+
+        payments.push({
+          month,
+          payment: monthlyPayment,
+          interest,
+          principal: principalPart,
+          balance: Math.max(0, balance)
+        });
+        yearTotal += monthlyPayment;
+      }
+
+      yearCount++;
+      if (yearCount === 12 || month === totalMonths + graceMonths) {
+        yearlyTotals.push({
+          year: currentYear,
+          total: yearTotal
+        });
+        yearTotal = 0;
+        yearCount = 0;
+        currentYear++;
+      }
+    }
+
+    setPayments(payments);
+    setYearlyTotals(yearlyTotals);
+    setTotalPayment(payments.reduce((sum, payment) => sum + payment.payment, 0));
+  };
+
+  const getSummary = () => {
+    if (!amount || !downPaymentPercent) return null;
+    const downPaymentAmount = (Number(amount) * Number(downPaymentPercent)) / 100;
+    return {
+      totalAmount: Number(amount),
+      downPayment: downPaymentAmount,
+      loanAmount: Number(amount) - downPaymentAmount
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-gray-100">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-16 w-16 animate-spin text-blue-500" />
+          <h2 className="text-2xl font-bold text-gray-700">LOADING...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  const summary = getSummary();
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h1 className="text-2xl font-bold mb-6 text-center">Kredit Kalkulyatori</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Kredit miqdori:</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Summa kiriting"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Boshlang'ich to'lov (%):</label>
+            <input
+              type="number"
+              value={downPaymentPercent}
+              onChange={(e) => setDownPaymentPercent(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Foizni kiriting"
+              min="0"
+              max="100"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Muddat (yil):</label>
+            <input
+              type="number"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Yilni kiriting"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Imtiyoz davri (oy):</label>
+            <input
+              type="number"
+              value={gracePeriod}
+              onChange={(e) => setGracePeriod(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Oyni kiriting"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Yillik foiz stavkasi (%):</label>
+            <input
+              type="number"
+              value={yearlyRate}
+              onChange={(e) => setYearlyRate(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Foizni kiriting"
+            />
+          </div>
         </div>
 
-        <div class="input-group">
-            <label>Boshlang'ich to'lov (% da)</label>
-            <input type="number" id="downPaymentPercent" placeholder="Misol: 15" value="15" onchange="updateDownPayment()">
-        </div>
+        {summary && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-medium mb-2">Kredit ma'lumotlari:</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Umumiy summa:</span>
+                <div className="font-medium">{summary.totalAmount.toLocaleString('uz-UZ')} so'm</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Boshlang'ich to'lov:</span>
+                <div className="font-medium">{summary.downPayment.toLocaleString('uz-UZ')} so'm</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Kredit summasi:</span>
+                <div className="font-medium">{summary.loanAmount.toLocaleString('uz-UZ')} so'm</div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <button
+          onClick={calculatePayments}
+          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+        >
+          Hisoblash
+        </button>
+      </div>
 
-        <div class="down-payment-info">
-            <p>Boshlang'ich to'lov miqdori: <span id="downPaymentAmount">0</span> so'm</p>
-            <p>Kredit miqdori: <span id="loanAmount">0</span> so'm</p>
-        </div>
-        
-        <div class="input-group">
-            <label>Kredit muddati (oy)</label>
-            <input type="number" id="loanTerm" placeholder="Misol: 12">
-        </div>
-        
-        <div class="input-group">
-            <label>Yillik foiz stavkasi (%)</label>
-            <input type="number" id="interestRate" placeholder="Misol: 24">
-        </div>
-        
-        <div class="input-group">
-            <label>To'lov turi</label>
-            <select id="paymentType">
-                <option value="annuitet">Annuitet</option>
-                <option value="differentiated">Differentsial</option>
-            </select>
-        </div>
-
-        <button onclick="calculateLoan()">Hisoblash</button>
-        
-        <div id="result" class="result" style="display: none;">
-            <p>Birinchi oylik to'lov: <span id="monthlyPayment">0</span> so'm</p>
-            <p>Jami to'lov: <span id="totalPayment">0</span> so'm</p>
-            <p>Foiz to'lovi: <span id="totalInterest">0</span> so'm</p>
-        </div>
-
-        <div id="scheduleContainer" style="display: none; overflow-x: auto;">
-            <h3>To'lov jadvali</h3>
-            <table class="schedule-table">
-                <thead>
-                    <tr>
-                        <th>Oy</th>
-                        <th>Asosiy qarz</th>
-                        <th>Foiz to'lovi</th>
-                        <th>Jami to'lov</th>
-                        <th>Qoldiq</th>
-                    </tr>
-                </thead>
-                <tbody id="scheduleBody">
-                </tbody>
+      {payments.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-bold mb-4">To'lovlar jadvali</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-2 border">Oy</th>
+                  <th className="p-2 border">To'lov</th>
+                  <th className="p-2 border">Foiz</th>
+                  <th className="p-2 border">Asosiy qarz</th>
+                  <th className="p-2 border">Qoldiq</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.month}>
+                    <td className="p-2 border text-center">{payment.month}</td>
+                    <td className="p-2 border text-right">{payment.payment.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                    <td className="p-2 border text-right">{payment.interest.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                    <td className="p-2 border text-right">{payment.principal.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                    <td className="p-2 border text-right">{payment.balance.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
+          </div>
+
+          <h2 className="text-xl font-bold mt-6 mb-4">Yillik to'lovlar</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-2 border">Yil</th>
+                  <th className="p-2 border">Jami to'lov</th>
+                </tr>
+              </thead>
+              <tbody>
+                {yearlyTotals.map((yearData) => (
+                  <tr key={yearData.year}>
+                    <td className="p-2 border text-center">{yearData.year}</td>
+                    <td className="p-2 border text-right">{yearData.total.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+                <tr className="font-bold bg-gray-50">
+                  <td className="p-2 border">JAMI:</td>
+                  <td className="p-2 border text-right">{totalPayment.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
     </div>
+  );
+};
 
-    <script>
-        function formatNumber(num) {
-            return Math.round(num).toLocaleString('uz-UZ');
-        }
-
-        function updateDownPayment() {
-            const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
-            const downPaymentPercent = parseFloat(document.getElementById('downPaymentPercent').value) || 0;
-            
-            const downPaymentAmount = totalAmount * (downPaymentPercent / 100);
-            const loanAmount = totalAmount - downPaymentAmount;
-            
-            document.getElementById('downPaymentAmount').textContent = formatNumber(downPaymentAmount);
-            document.getElementById('loanAmount').textContent = formatNumber(loanAmount);
-        }
-
-        function calculateLoan() {
-            const totalAmount = parseFloat(document.getElementById('totalAmount').value);
-            const downPaymentPercent = parseFloat(document.getElementById('downPaymentPercent').value);
-            const downPaymentAmount = totalAmount * (downPaymentPercent / 100);
-            const amount = totalAmount - downPaymentAmount;
-            const term = parseInt(document.getElementById('loanTerm').value);
-            const rate = parseFloat(document.getElementById('interestRate').value) / 100 / 12;
-            const paymentType = document.getElementById('paymentType').value;
-            
-            let schedule = [];
-            let remainingBalance = amount;
-            let totalPayment = 0;
-            let totalInterest = 0;
-
-            if (paymentType === 'annuitet') {
-                const monthlyPayment = amount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-                
-                for (let month = 1; month <= term; month++) {
-                    const interest = remainingBalance * rate;
-                    const principal = monthlyPayment - interest;
-                    remainingBalance -= principal;
-                    
-                    schedule.push({
-                        month: month,
-                        principal: principal,
-                        interest: interest,
-                        payment: monthlyPayment,
-                        balance: Math.max(0, remainingBalance)
-                    });
-
-                    totalPayment += monthlyPayment;
-                    totalInterest += interest;
-                }
-            } else {
-                const principal = amount / term;
-                
-                for (let month = 1; month <= term; month++) {
-                    const interest = remainingBalance * rate;
-                    const payment = principal + interest;
-                    remainingBalance -= principal;
-                    
-                    schedule.push({
-                        month: month,
-                        principal: principal,
-                        interest: interest,
-                        payment: payment,
-                        balance: Math.max(0, remainingBalance)
-                    });
-
-                    totalPayment += payment;
-                    totalInterest += interest;
-                }
-            }
-
-            // Natijalarni ko'rsatish
-            document.getElementById('monthlyPayment').textContent = formatNumber(schedule[0].payment);
-            document.getElementById('totalPayment').textContent = formatNumber(totalPayment);
-            document.getElementById('totalInterest').textContent = formatNumber(totalInterest);
-            document.getElementById('result').style.display = 'block';
-
-            // Jadval yaratish
-            const scheduleBody = document.getElementById('scheduleBody');
-            scheduleBody.innerHTML = '';
-            
-            schedule.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="text-align: center;">${row.month}</td>
-                    <td>${formatNumber(row.principal)}</td>
-                    <td>${formatNumber(row.interest)}</td>
-                    <td>${formatNumber(row.payment)}</td>
-                    <td>${formatNumber(row.balance)}</td>
-                `;
-                scheduleBody.appendChild(tr);
-            });
-            
-            document.getElementById('scheduleContainer').style.display = 'block';
-
-            // Telegram WebApp ga natijani yuborish
-            if (window.Telegram?.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify({
-                    totalAmount: totalAmount,
-                    downPayment: downPaymentAmount,
-                    loanAmount: amount,
-                    monthlyPayment: schedule[0].payment,
-                    totalPayment: totalPayment,
-                    totalInterest: totalInterest,
-                    schedule: schedule
-                }));
-            }
-        }
-
-        // Sahifa yuklanganda boshlang'ich to'lovni hisoblash
-        updateDownPayment();
-    </script>
-</body>
-</html>
+export default CreditCalculator;
