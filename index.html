@@ -1,316 +1,282 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-
-const CreditCalculator = () => {
-  const [loading, setLoading] = useState(true);
-  const [amount, setAmount] = useState('');
-  const [downPaymentPercent, setDownPaymentPercent] = useState('');
-  const [term, setTerm] = useState('');
-  const [gracePeriod, setGracePeriod] = useState('');
-  const [yearlyRate, setYearlyRate] = useState('');
-  const [paymentType, setPaymentType] = useState('annuitet');
-  const [payments, setPayments] = useState([]);
-  const [yearlyTotals, setYearlyTotals] = useState([]);
-  const [totalPayment, setTotalPayment] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const calculateAnnuityPayments = (principal, monthlyRate, totalMonths, graceMonths) => {
-    let payments = [];
-    let balance = principal;
-    
-    // Imtiyoz davri uchun to'lovlar
-    for (let month = 1; month <= graceMonths; month++) {
-      const interest = balance * monthlyRate;
-      payments.push({
-        month,
-        payment: interest,
-        interest,
-        principal: 0,
-        balance
-      });
-    }
-
-    // Annuitet to'lovlar
-    const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
-                          (Math.pow(1 + monthlyRate, totalMonths) - 1);
-
-    for (let month = graceMonths + 1; month <= totalMonths + graceMonths; month++) {
-      const interest = balance * monthlyRate;
-      const principalPart = monthlyPayment - interest;
-      balance = Math.max(0, balance - principalPart);
-
-      payments.push({
-        month,
-        payment: monthlyPayment,
-        interest,
-        principal: principalPart,
-        balance
-      });
-    }
-
-    return payments;
-  };
-
-  const calculateDifferentialPayments = (principal, monthlyRate, totalMonths, graceMonths) => {
-    let payments = [];
-    let balance = principal;
-    
-    // Imtiyoz davri uchun to'lovlar
-    for (let month = 1; month <= graceMonths; month++) {
-      const interest = balance * monthlyRate;
-      payments.push({
-        month,
-        payment: interest,
-        interest,
-        principal: 0,
-        balance
-      });
-    }
-
-    // Differensial to'lovlar
-    const monthlyPrincipal = principal / totalMonths;
-
-    for (let month = graceMonths + 1; month <= totalMonths + graceMonths; month++) {
-      const interest = balance * monthlyRate;
-      balance = Math.max(0, balance - monthlyPrincipal);
-
-      payments.push({
-        month,
-        payment: monthlyPrincipal + interest,
-        interest,
-        principal: monthlyPrincipal,
-        balance
-      });
-    }
-
-    return payments;
-  };
-
-  const calculatePayments = () => {
-    const downPaymentAmount = (Number(amount) * Number(downPaymentPercent)) / 100;
-    const principal = Number(amount) - downPaymentAmount;
-    const monthlyRate = (Number(yearlyRate) / 12) / 100;
-    const totalMonths = Number(term);
-    const graceMonths = Number(gracePeriod);
-
-    let payments = paymentType === 'annuitet' 
-      ? calculateAnnuityPayments(principal, monthlyRate, totalMonths, graceMonths)
-      : calculateDifferentialPayments(principal, monthlyRate, totalMonths, graceMonths);
-
-    // Yillik to'lovlarni hisoblash
-    let yearlyTotals = [];
-    let yearTotal = 0;
-    let currentYear = 1;
-    let monthsInYear = 0;
-
-    payments.forEach((payment, index) => {
-      yearTotal += payment.payment;
-      monthsInYear++;
-
-      if (monthsInYear === 12 || index === payments.length - 1) {
-        yearlyTotals.push({
-          year: currentYear,
-          total: yearTotal
-        });
-        yearTotal = 0;
-        monthsInYear = 0;
-        currentYear++;
-      }
-    });
-
-    setPayments(payments);
-    setYearlyTotals(yearlyTotals);
-    setTotalPayment(payments.reduce((sum, payment) => sum + payment.payment, 0));
-  };
-
-  const getSummary = () => {
-    if (!amount || !downPaymentPercent) return null;
-    const downPaymentAmount = (Number(amount) * Number(downPaymentPercent)) / 100;
-    return {
-      totalAmount: Number(amount),
-      downPayment: downPaymentAmount,
-      loanAmount: Number(amount) - downPaymentAmount
-    };
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-full bg-gray-100">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-16 w-16 animate-spin text-blue-500" />
-          <h2 className="text-2xl font-bold text-gray-700">LOADING...</h2>
-        </div>
-      </div>
-    );
-  }
-
-  const summary = getSummary();
-
-  return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h1 className="text-2xl font-bold mb-6 text-center">Kredit Kalkulyatori</h1>
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kredit Kalkulyatori</title>
+    <style>
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-size: 24px;
+            font-weight: bold;
+        }
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Kredit miqdori:</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Summa kiriting"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Boshlang'ich to'lov (%):</label>
-            <input
-              type="number"
-              value={downPaymentPercent}
-              onChange={(e) => setDownPaymentPercent(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Foizni kiriting"
-              min="0"
-              max="100"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">To'lov turi:</label>
-            <select
-              value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="annuitet">Annuitet</option>
-              <option value="differential">Differensial</option>
-            </select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Muddat (oy):</label>
-            <input
-              type="number"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Oyni kiriting"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Imtiyoz davri (oy):</label>
-            <input
-              type="number"
-              value={gracePeriod}
-              onChange={(e) => setGracePeriod(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Oyni kiriting"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Yillik foiz stavkasi (%):</label>
-            <input
-              type="number"
-              value={yearlyRate}
-              onChange={(e) => setYearlyRate(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Foizni kiriting"
-            />
-          </div>
-        </div>
-
-        {summary && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-medium mb-2">Kredit ma'lumotlari:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Umumiy summa:</span>
-                <div className="font-medium">{summary.totalAmount.toLocaleString('uz-UZ')} so'm</div>
-              </div>
-              <div>
-                <span className="text-gray-600">Boshlang'ich to'lov:</span>
-                <div className="font-medium">{summary.downPayment.toLocaleString('uz-UZ')} so'm</div>
-              </div>
-              <div>
-                <span className="text-gray-600">Kredit summasi:</span>
-                <div className="font-medium">{summary.loanAmount.toLocaleString('uz-UZ')} so'm</div>
-              </div>
-            </div>
-          </div>
-        )}
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
         
-        <button
-          onClick={calculatePayments}
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-        >
-          Hisoblash
-        </button>
-      </div>
-
-      {payments.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4">To'lovlar jadvali</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-2 border">Oy</th>
-                  <th className="p-2 border">To'lov</th>
-                  <th className="p-2 border">Foiz</th>
-                  <th className="p-2 border">Asosiy qarz</th>
-                  <th className="p-2 border">Qoldiq</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.month} className={payment.month <= Number(gracePeriod) ? "bg-gray-50" : ""}>
-                    <td className="p-2 border text-center">{payment.month}</td>
-                    <td className="p-2 border text-right">{payment.payment.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                    <td className="p-2 border text-right">{payment.interest.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                    <td className="p-2 border text-right">{payment.principal.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                    <td className="p-2 border text-right">{payment.balance.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="text-xl font-bold mt-6 mb-4">Yillik to'lovlar</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-2 border">Yil</th>
-                  <th className="p-2 border">Jami to'lov</th>
-                </tr>
-              </thead>
-              <tbody>
-                {yearlyTotals.map((yearData) => (
-                  <tr key={yearData.year}>
-                    <td className="p-2 border text-center">{yearData.year}</td>
-                    <td className="p-2 border text-right">{yearData.total.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-                <tr className="font-bold bg-gray-50">
-                  <td className="p-2 border">JAMI:</td>
-                  <td className="p-2 border text-right">{totalPayment.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        
+        th {
+            background-color: #f5f5f5;
+        }
+        
+        .summary {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        <div>
+            <img src="/api/placeholder/100/100" alt="Loading..." />
+            <div>YUKLANMOQDA...</div>
         </div>
-      )}
     </div>
-  );
-};
 
-export default CreditCalculator;
+    <div class="form-group">
+        <label>Kredit miqdori:</label>
+        <input type="number" id="amount" min="0" step="1000">
+    </div>
+
+    <div class="form-group">
+        <label>Boshlang'ich to'lov (%):</label>
+        <input type="number" id="downPayment" min="0" max="100">
+    </div>
+
+    <div class="form-group">
+        <label>Kredit muddati (oy):</label>
+        <input type="number" id="term" min="1">
+    </div>
+
+    <div class="form-group">
+        <label>Yillik foiz stavkasi (%):</label>
+        <input type="number" id="rate" min="0" step="0.1">
+    </div>
+
+    <div class="form-group">
+        <label>Imtiyoz davri (oy):</label>
+        <input type="number" id="gracePeriod" min="0">
+    </div>
+
+    <div class="form-group">
+        <label>To'lov turi:</label>
+        <select id="paymentType">
+            <option value="annuitet">Annuitet</option>
+            <option value="differential">Differentsial</option>
+        </select>
+    </div>
+
+    <button onclick="calculateLoan()">Hisoblash</button>
+
+    <div id="result"></div>
+
+    <script>
+        // Yuklanish ekranini yashirish
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 1500);
+        };
+
+        function calculateLoan() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value);
+            const term = parseInt(document.getElementById('term').value);
+            const annualRate = parseFloat(document.getElementById('rate').value);
+            const gracePeriod = parseInt(document.getElementById('gracePeriod').value);
+            const paymentType = document.getElementById('paymentType').value;
+
+            if (!amount || !term || !annualRate) {
+                alert('Iltimos, barcha maydonlarni to\'ldiring!');
+                return;
+            }
+
+            const downPaymentAmount = (amount * downPaymentPercent) / 100;
+            const loanAmount = amount - downPaymentAmount;
+            const monthlyRate = annualRate / 12 / 100;
+
+            let payments = [];
+            let totalPayment = 0;
+            let totalInterest = 0;
+
+            if (paymentType === 'annuitet') {
+                // Annuitet to'lov
+                const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / 
+                                     (Math.pow(1 + monthlyRate, term) - 1);
+
+                let remainingLoan = loanAmount;
+                
+                for (let month = 1; month <= term; month++) {
+                    const interestPayment = remainingLoan * monthlyRate;
+                    const principalPayment = monthlyPayment - interestPayment;
+                    
+                    if (month <= gracePeriod) {
+                        // Imtiyoz davrida faqat foizlar to'lanadi
+                        payments.push({
+                            month,
+                            payment: interestPayment,
+                            principal: 0,
+                            interest: interestPayment,
+                            remaining: remainingLoan
+                        });
+                        totalPayment += interestPayment;
+                        totalInterest += interestPayment;
+                    } else {
+                        remainingLoan -= principalPayment;
+                        payments.push({
+                            month,
+                            payment: monthlyPayment,
+                            principal: principalPayment,
+                            interest: interestPayment,
+                            remaining: remainingLoan
+                        });
+                        totalPayment += monthlyPayment;
+                        totalInterest += interestPayment;
+                    }
+                }
+            } else {
+                // Differentsial to'lov
+                const principalPayment = loanAmount / (term - gracePeriod);
+                let remainingLoan = loanAmount;
+
+                for (let month = 1; month <= term; month++) {
+                    const interestPayment = remainingLoan * monthlyRate;
+                    
+                    if (month <= gracePeriod) {
+                        // Imtiyoz davrida faqat foizlar to'lanadi
+                        payments.push({
+                            month,
+                            payment: interestPayment,
+                            principal: 0,
+                            interest: interestPayment,
+                            remaining: remainingLoan
+                        });
+                        totalPayment += interestPayment;
+                        totalInterest += interestPayment;
+                    } else {
+                        remainingLoan -= principalPayment;
+                        const payment = principalPayment + interestPayment;
+                        payments.push({
+                            month,
+                            payment: payment,
+                            principal: principalPayment,
+                            interest: interestPayment,
+                            remaining: remainingLoan
+                        });
+                        totalPayment += payment;
+                        totalInterest += interestPayment;
+                    }
+                }
+            }
+
+            displayResults(payments, totalPayment, totalInterest, loanAmount);
+        }
+
+        function displayResults(payments, totalPayment, totalInterest, loanAmount) {
+            let html = '<table>';
+            html += '<tr><th>Oy</th><th>To\'lov</th><th>Asosiy qarz</th><th>Foiz</th><th>Qoldiq</th></tr>';
+
+            let yearlyTotals = {};
+            
+            payments.forEach(payment => {
+                const year = Math.ceil(payment.month / 12);
+                if (!yearlyTotals[year]) {
+                    yearlyTotals[year] = {
+                        payment: 0,
+                        principal: 0,
+                        interest: 0
+                    };
+                }
+                yearlyTotals[year].payment += payment.payment;
+                yearlyTotals[year].principal += payment.principal;
+                yearlyTotals[year].interest += payment.interest;
+
+                html += `
+                    <tr>
+                        <td>${payment.month}</td>
+                        <td>${payment.payment.toFixed(2)}</td>
+                        <td>${payment.principal.toFixed(2)}</td>
+                        <td>${payment.interest.toFixed(2)}</td>
+                        <td>${Math.max(0, payment.remaining).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            // Yillik umumiy to'lovlar
+            Object.keys(yearlyTotals).forEach(year => {
+                const yearTotal = yearlyTotals[year];
+                html += `
+                    <tr style="background-color: #f0f0f0; font-weight: bold;">
+                        <td>${year}-yil jami:</td>
+                        <td>${yearTotal.payment.toFixed(2)}</td>
+                        <td>${yearTotal.principal.toFixed(2)}</td>
+                        <td>${yearTotal.interest.toFixed(2)}</td>
+                        <td>-</td>
+                    </tr>
+                `;
+            });
+
+            html += '</table>';
+
+            html += `
+                <div class="summary">
+                    <p>Kredit miqdori: ${loanAmount.toFixed(2)}</p>
+                    <p>Jami to'lov: ${totalPayment.toFixed(2)}</p>
+                    <p>Jami foiz to'lovi: ${totalInterest.toFixed(2)}</p>
+                </div>
+            `;
+
+            document.getElementById('result').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
