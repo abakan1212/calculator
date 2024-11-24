@@ -8,6 +8,7 @@ const CreditCalculator = () => {
   const [term, setTerm] = useState('');
   const [gracePeriod, setGracePeriod] = useState('');
   const [yearlyRate, setYearlyRate] = useState('');
+  const [paymentType, setPaymentType] = useState('annuitet');
   const [payments, setPayments] = useState([]);
   const [yearlyTotals, setYearlyTotals] = useState([]);
   const [totalPayment, setTotalPayment] = useState(0);
@@ -19,60 +20,109 @@ const CreditCalculator = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const calculateAnnuityPayments = (principal, monthlyRate, totalMonths, graceMonths) => {
+    let payments = [];
+    let balance = principal;
+    
+    // Imtiyoz davri uchun to'lovlar
+    for (let month = 1; month <= graceMonths; month++) {
+      const interest = balance * monthlyRate;
+      payments.push({
+        month,
+        payment: interest,
+        interest,
+        principal: 0,
+        balance
+      });
+    }
+
+    // Annuitet to'lovlar
+    const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
+                          (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
+    for (let month = graceMonths + 1; month <= totalMonths + graceMonths; month++) {
+      const interest = balance * monthlyRate;
+      const principalPart = monthlyPayment - interest;
+      balance = Math.max(0, balance - principalPart);
+
+      payments.push({
+        month,
+        payment: monthlyPayment,
+        interest,
+        principal: principalPart,
+        balance
+      });
+    }
+
+    return payments;
+  };
+
+  const calculateDifferentialPayments = (principal, monthlyRate, totalMonths, graceMonths) => {
+    let payments = [];
+    let balance = principal;
+    
+    // Imtiyoz davri uchun to'lovlar
+    for (let month = 1; month <= graceMonths; month++) {
+      const interest = balance * monthlyRate;
+      payments.push({
+        month,
+        payment: interest,
+        interest,
+        principal: 0,
+        balance
+      });
+    }
+
+    // Differensial to'lovlar
+    const monthlyPrincipal = principal / totalMonths;
+
+    for (let month = graceMonths + 1; month <= totalMonths + graceMonths; month++) {
+      const interest = balance * monthlyRate;
+      balance = Math.max(0, balance - monthlyPrincipal);
+
+      payments.push({
+        month,
+        payment: monthlyPrincipal + interest,
+        interest,
+        principal: monthlyPrincipal,
+        balance
+      });
+    }
+
+    return payments;
+  };
+
   const calculatePayments = () => {
     const downPaymentAmount = (Number(amount) * Number(downPaymentPercent)) / 100;
     const principal = Number(amount) - downPaymentAmount;
     const monthlyRate = (Number(yearlyRate) / 12) / 100;
-    const totalMonths = Number(term) * 12;
+    const totalMonths = Number(term);
     const graceMonths = Number(gracePeriod);
 
-    let monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
-                        (Math.pow(1 + monthlyRate, totalMonths) - 1);
+    let payments = paymentType === 'annuitet' 
+      ? calculateAnnuityPayments(principal, monthlyRate, totalMonths, graceMonths)
+      : calculateDifferentialPayments(principal, monthlyRate, totalMonths, graceMonths);
 
-    let payments = [];
-    let balance = principal;
-    let yearTotal = 0;
+    // Yillik to'lovlarni hisoblash
     let yearlyTotals = [];
+    let yearTotal = 0;
     let currentYear = 1;
-    let yearCount = 0;
+    let monthsInYear = 0;
 
-    for (let month = 1; month <= totalMonths + graceMonths; month++) {
-      if (month <= graceMonths) {
-        const interest = balance * monthlyRate;
-        payments.push({
-          month,
-          payment: interest,
-          interest,
-          principal: 0,
-          balance
-        });
-        yearTotal += interest;
-      } else {
-        const interest = balance * monthlyRate;
-        const principalPart = monthlyPayment - interest;
-        balance -= principalPart;
+    payments.forEach((payment, index) => {
+      yearTotal += payment.payment;
+      monthsInYear++;
 
-        payments.push({
-          month,
-          payment: monthlyPayment,
-          interest,
-          principal: principalPart,
-          balance: Math.max(0, balance)
-        });
-        yearTotal += monthlyPayment;
-      }
-
-      yearCount++;
-      if (yearCount === 12 || month === totalMonths + graceMonths) {
+      if (monthsInYear === 12 || index === payments.length - 1) {
         yearlyTotals.push({
           year: currentYear,
           total: yearTotal
         });
         yearTotal = 0;
-        yearCount = 0;
+        monthsInYear = 0;
         currentYear++;
       }
-    }
+    });
 
     setPayments(payments);
     setYearlyTotals(yearlyTotals);
@@ -133,13 +183,25 @@ const CreditCalculator = () => {
           </div>
           
           <div className="space-y-2">
-            <label className="block text-sm font-medium">Muddat (yil):</label>
+            <label className="block text-sm font-medium">To'lov turi:</label>
+            <select
+              value={paymentType}
+              onChange={(e) => setPaymentType(e.target.value)}
+              className="w-full p-2 border rounded"
+            >
+              <option value="annuitet">Annuitet</option>
+              <option value="differential">Differensial</option>
+            </select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Muddat (oy):</label>
             <input
               type="number"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               className="w-full p-2 border rounded"
-              placeholder="Yilni kiriting"
+              placeholder="Oyni kiriting"
             />
           </div>
           
@@ -210,7 +272,7 @@ const CreditCalculator = () => {
               </thead>
               <tbody>
                 {payments.map((payment) => (
-                  <tr key={payment.month}>
+                  <tr key={payment.month} className={payment.month <= Number(gracePeriod) ? "bg-gray-50" : ""}>
                     <td className="p-2 border text-center">{payment.month}</td>
                     <td className="p-2 border text-right">{payment.payment.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
                     <td className="p-2 border text-right">{payment.interest.toLocaleString('uz-UZ', { maximumFractionDigits: 2 })}</td>
