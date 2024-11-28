@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kredit Kalkulyatori</title>
-<style>
+    <style>
         * {
             margin: 0;
             padding: 0;
@@ -15,9 +15,53 @@
         body {
             padding: 16px;
             background-color: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        /* Loading screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-container {
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            text-align: center;
+        }
+
+        .loading-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .loading-text {
+            position: absolute;
+            bottom: 10%;
+            left: 0;
+            right: 0;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 16px;
         }
 
         /* Form styles */
+        .calculator-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -37,11 +81,13 @@
             font-size: 16px;
             background: white;
             color: #333;
+            transition: border-color 0.3s ease;
         }
 
         input:focus, select:focus {
             outline: none;
             border-color: #3390ec;
+            box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.1);
         }
 
         /* Button style */
@@ -55,47 +101,30 @@
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
+            transition: background 0.3s ease;
         }
 
         button:hover {
             background: #2982d8;
         }
 
-        /* Loading screen */
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 5000;
-        }
-
-        .loading-image {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 16px;
-        }
-
-        .loading-text {
-            color: #333;
-            font-size: 16px;
-            font-weight: 500;
+        button:active {
+            transform: translateY(1px);
         }
 
         /* Result table */
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .table-container {
+            overflow-x: auto;
             margin-top: 20px;
             background: white;
             border-radius: 8px;
-            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
         }
 
         th, td {
@@ -108,6 +137,16 @@
             background: #f7f9fc;
             color: #6c7278;
             font-weight: 500;
+            white-space: nowrap;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        .year-total {
+            background-color: #f0f0f0 !important;
+            font-weight: bold;
         }
 
         .summary {
@@ -115,90 +154,114 @@
             padding: 16px;
             background: white;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .summary p {
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             color: #333;
-        }
-    
-        #loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+            font-size: 15px;
         }
 
-        #loading img {
-            max-width: 80%;
-            width: 300px;
+        .summary p:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+
+            input, select, button {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .summary {
+                padding: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
-
 <body>
     <div id="loading" class="loading">
-    <div style="position: relative; text-align: center;">
-        <img src="https://raw.githubusercontent.com/abakan1212/calculator/refs/heads/main/KREDIT%20KALKULYATORI%20(2).svg" alt="Loading..." style="max-width: 100%; height: auto;" />
-        <div style="position: absolute; bottom: 10%; left: 0; right: 0; color: white; font-weight: bold; text-align: center;">YUKLANMOQDA...</div>
-    </div>
-</div>
-    <div class="form-group">
-        <label>Kredit miqdori:</label>
-        <input type="number" id="amount" min="0" step="1000">
+        <div class="loading-container">
+            <img class="loading-image" src="https://raw.githubusercontent.com/abakan1212/calculator/refs/heads/main/KREDIT%20KALKULYATORI%20(2).svg" alt="Loading...">
+            <div class="loading-text">YUKLANMOQDA...</div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label>Boshlang'ich to'lov (%):</label>
-        <input type="number" id="downPayment" min="0" max="100">
+    <div class="calculator-container">
+        <div class="form-group">
+            <label>Kredit miqdori:</label>
+            <input type="number" id="amount" min="0" step="1000" placeholder="Miqdorni kiriting">
+        </div>
+
+        <div class="form-group">
+            <label>Boshlang'ich to'lov (%):</label>
+            <input type="number" id="downPayment" min="0" max="100" placeholder="Foizni kiriting">
+        </div>
+
+        <div class="form-group">
+            <label>Kredit muddati (oy):</label>
+            <input type="number" id="term" min="1" placeholder="Oylar sonini kiriting">
+        </div>
+
+        <div class="form-group">
+            <label>Yillik foiz stavkasi (%):</label>
+            <input type="number" id="rate" min="0" step="0.1" placeholder="Foiz stavkasini kiriting">
+        </div>
+
+        <div class="form-group">
+            <label>Imtiyoz davri (oy):</label>
+            <input type="number" id="gracePeriod" min="0" placeholder="Imtiyoz davrini kiriting">
+        </div>
+
+        <div class="form-group">
+            <label>To'lov turi:</label>
+            <select id="paymentType">
+                <option value="annuitet">Annuitet</option>
+                <option value="differential">Differentsial</option>
+            </select>
+        </div>
+
+        <button onclick="calculateLoan()">Hisoblash</button>
+
+        <div id="result"></div>
     </div>
-
-    <div class="form-group">
-        <label>Kredit muddati (oy):</label>
-        <input type="number" id="term" min="1">
-    </div>
-
-    <div class="form-group">
-        <label>Yillik foiz stavkasi (%):</label>
-        <input type="number" id="rate" min="0" step="0.1">
-    </div>
-
-    <div class="form-group">
-        <label>Imtiyoz davri (oy):</label>
-        <input type="number" id="gracePeriod" min="0">
-    </div>
-
-    <div class="form-group">
-        <label>To'lov turi:</label>
-        <select id="paymentType">
-            <option value="annuitet">Annuitet</option>
-            <option value="differential">Differentsial</option>
-        </select>
-    </div>
-
-    <button onclick="calculateLoan()">Hisoblash</button>
-
-    <div id="result"></div>
 
     <script>
-        // Yuklanish ekranini yashirish
-        window.onload = function() {
+        // Loading screen
+        window.addEventListener('load', function() {
             setTimeout(() => {
-                document.getElementById('loading').style.display = 'none';
+                const loadingScreen = document.getElementById('loading');
+                loadingScreen.style.opacity = '0';
+                loadingScreen.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
             }, 1500);
-        };
+        });
+
+        function formatNumber(number) {
+            return new Intl.NumberFormat('uz-UZ').format(number.toFixed(2));
+        }
 
         function calculateLoan() {
             const amount = parseFloat(document.getElementById('amount').value);
-            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value);
+            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value) || 0;
             const term = parseInt(document.getElementById('term').value);
             const annualRate = parseFloat(document.getElementById('rate').value);
-            const gracePeriod = parseInt(document.getElementById('gracePeriod').value);
+            const gracePeriod = parseInt(document.getElementById('gracePeriod').value) || 0;
             const paymentType = document.getElementById('paymentType').value;
 
             if (!amount || !term || !annualRate) {
-                alert('Iltimos, barcha maydonlarni to\'ldiring!');
+                alert('Iltimos, barcha zarur maydonlarni to\'ldiring!');
                 return;
             }
 
@@ -211,7 +274,6 @@
             let totalInterest = 0;
 
             if (paymentType === 'annuitet') {
-                // Annuitet to'lov
                 const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / 
                                      (Math.pow(1 + monthlyRate, term) - 1);
 
@@ -219,72 +281,55 @@
                 
                 for (let month = 1; month <= term; month++) {
                     const interestPayment = remainingLoan * monthlyRate;
-                    const principalPayment = monthlyPayment - interestPayment;
+                    const principalPayment = month <= gracePeriod ? 0 : monthlyPayment - interestPayment;
+                    const payment = month <= gracePeriod ? interestPayment : monthlyPayment;
                     
-                    if (month <= gracePeriod) {
-                        // Imtiyoz davrida faqat foizlar to'lanadi
-                        payments.push({
-                            month,
-                            payment: interestPayment,
-                            principal: 0,
-                            interest: interestPayment,
-                            remaining: remainingLoan
-                        });
-                        totalPayment += interestPayment;
-                        totalInterest += interestPayment;
-                    } else {
+                    if (month > gracePeriod) {
                         remainingLoan -= principalPayment;
-                        payments.push({
-                            month,
-                            payment: monthlyPayment,
-                            principal: principalPayment,
-                            interest: interestPayment,
-                            remaining: remainingLoan
-                        });
-                        totalPayment += monthlyPayment;
-                        totalInterest += interestPayment;
                     }
+
+                    payments.push({
+                        month,
+                        payment,
+                        principal: principalPayment,
+                        interest: interestPayment,
+                        remaining: Math.max(0, remainingLoan)
+                    });
+
+                    totalPayment += payment;
+                    totalInterest += interestPayment;
                 }
             } else {
-                // Differentsial to'lov
                 const principalPayment = loanAmount / (term - gracePeriod);
                 let remainingLoan = loanAmount;
 
                 for (let month = 1; month <= term; month++) {
                     const interestPayment = remainingLoan * monthlyRate;
-                    
-                    if (month <= gracePeriod) {
-                        // Imtiyoz davrida faqat foizlar to'lanadi
-                        payments.push({
-                            month,
-                            payment: interestPayment,
-                            principal: 0,
-                            interest: interestPayment,
-                            remaining: remainingLoan
-                        });
-                        totalPayment += interestPayment;
-                        totalInterest += interestPayment;
-                    } else {
+                    const currentPrincipal = month <= gracePeriod ? 0 : principalPayment;
+                    const payment = currentPrincipal + interestPayment;
+
+                    if (month > gracePeriod) {
                         remainingLoan -= principalPayment;
-                        const payment = principalPayment + interestPayment;
-                        payments.push({
-                            month,
-                            payment: payment,
-                            principal: principalPayment,
-                            interest: interestPayment,
-                            remaining: remainingLoan
-                        });
-                        totalPayment += payment;
-                        totalInterest += interestPayment;
                     }
+
+                    payments.push({
+                        month,
+                        payment,
+                        principal: currentPrincipal,
+                        interest: interestPayment,
+                        remaining: Math.max(0, remainingLoan)
+                    });
+
+                    totalPayment += payment;
+                    totalInterest += interestPayment;
                 }
             }
 
-            displayResults(payments, totalPayment, totalInterest, loanAmount);
+            displayResults(payments, totalPayment, totalInterest, loanAmount, downPaymentAmount);
         }
 
-        function displayResults(payments, totalPayment, totalInterest, loanAmount) {
-            let html = '<table>';
+        function displayResults(payments, totalPayment, totalInterest, loanAmount, downPaymentAmount) {
+            let html = '<div class="table-container"><table>';
             html += '<tr><th>Oy</th><th>To\'lov</th><th>Asosiy qarz</th><th>Foiz</th><th>Qoldiq</th></tr>';
 
             let yearlyTotals = {};
@@ -305,35 +350,38 @@
                 html += `
                     <tr>
                         <td>${payment.month}</td>
-                        <td>${payment.payment.toFixed(2)}</td>
-                        <td>${payment.principal.toFixed(2)}</td>
-                        <td>${payment.interest.toFixed(2)}</td>
-                        <td>${Math.max(0, payment.remaining).toFixed(2)}</td>
+                        <td>${formatNumber(payment.payment)}</td>
+                        <td>${formatNumber(payment.principal)}</td>
+                        <td>${formatNumber(payment.interest)}</td>
+                        <td>${formatNumber(payment.remaining)}</td>
                     </tr>
                 `;
+
+                // Yil oxirida yillik jami
+                if (payment.month % 12 === 0 || payment.month === payments.length) {
+                    const yearTotal = yearlyTotals[year];
+                    html += `
+                        <tr class="year-total">
+                            <td>${year}-yil jami:</td>
+                            <td>${formatNumber(yearTotal.payment)}</td>
+                            <td>${formatNumber(yearTotal.principal)}</td>
+                            <td>${formatNumber(yearTotal.interest)}</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                }
             });
 
-            // Yillik umumiy to'lovlar
-            Object.keys(yearlyTotals).forEach(year => {
-                const yearTotal = yearlyTotals[year];
-                html += `
-                    <tr style="background-color: #f0f0f0; font-weight: bold;">
-                        <td>${year}-yil jami:</td>
-                        <td>${yearTotal.payment.toFixed(2)}</td>
-                        <td>${yearTotal.principal.toFixed(2)}</td>
-                        <td>${yearTotal.interest.toFixed(2)}</td>
-                        <td>-</td>
-                    </tr>
-                `;
-            });
-
-            html += '</table>';
+            html += '</table></div>';
 
             html += `
                 <div class="summary">
-                    <p>Kredit miqdori: ${loanAmount.toFixed(2)}</p>
-                    <p>Jami to'lov: ${totalPayment.toFixed(2)}</p>
-                    <p>Jami foiz to'lovi: ${totalInterest.toFixed(2)}</p>
+                    <p>Kredit miqdori: ${formatNumber(loanAmount + downPaymentAmount)}</p>
+                    <p>Boshlang'ich to'lov: ${formatNumber(downPaymentAmount)}</p>
+                    <p>Sof kredit miqdori: ${formatNumber(loanAmount)}</p>
+                    <p>Jami to'lov: ${formatNumber(totalPayment)}</p>
+                    <p>Jami foiz to'lovi: ${formatNumber(totalInterest)}</p>
+                    <p>Umumiy to'lov (Kredit + Foiz): ${formatNumber(totalPayment + downPaymentAmount)}</p>
                 </div>
             `;
 
