@@ -2,22 +2,20 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kredit Kalkulyatori</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         body {
-            padding: 12px;
+            padding: 16px;
             background-color: #f0f2f5;
             min-height: 100vh;
-            -webkit-text-size-adjust: 100%;
         }
 
         .loading {
@@ -31,7 +29,6 @@
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            -webkit-transform: translateZ(0);
         }
 
         .loading-container {
@@ -45,7 +42,6 @@
             width: 100%;
             height: auto;
             object-fit: contain;
-            -webkit-user-select: none;
         }
 
         .loading-text {
@@ -60,9 +56,8 @@
         }
 
         .calculator-container {
-            max-width: 100%;
+            max-width: 600px;
             margin: 0 auto;
-            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .form-group {
@@ -71,9 +66,9 @@
 
         label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: #6c7278;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         input, select {
@@ -84,8 +79,9 @@
             font-size: 16px;
             background: white;
             color: #333;
-            -webkit-appearance: none;
             appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
         }
 
         select {
@@ -103,7 +99,7 @@
 
         button {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             background: #3390ec;
             color: white;
             border: none;
@@ -111,13 +107,15 @@
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: #2982d8;
         }
 
         button:active {
-            background: #2982d8;
-            transform: scale(0.98);
+            transform: translateY(1px);
         }
 
         .table-container {
@@ -125,8 +123,8 @@
             background: white;
             border-radius: 8px;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
@@ -140,6 +138,7 @@
             text-align: right;
             border: 1px solid #dfe1e5;
             font-size: 13px;
+            background: #fff;
         }
 
         th {
@@ -149,16 +148,18 @@
             white-space: nowrap;
             position: sticky;
             top: 0;
-            z-index: 1;
         }
 
-        tr:nth-child(even) {
+        tr:nth-child(even) td {
             background-color: #fafbfc;
         }
 
         .year-total {
-            background-color: #f0f0f0 !important;
             font-weight: bold;
+        }
+
+        .year-total td {
+            background-color: #f0f0f0 !important;
         }
 
         .summary {
@@ -170,29 +171,28 @@
         }
 
         .summary p {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             color: #333;
             font-size: 14px;
+            line-height: 1.4;
         }
 
         .summary p:last-child {
             margin-bottom: 0;
         }
 
-        @supports (-webkit-touch-callout: none) {
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
             body {
-                padding-bottom: env(safe-area-inset-bottom);
+                padding: 12px;
             }
-        }
 
-        @media (max-width: 320px) {
-            body {
-                padding: 8px;
+            .calculator-container {
+                max-width: 100%;
             }
 
             input, select, button {
-                padding: 10px;
-                font-size: 14px;
+                font-size: 16px;
             }
 
             .summary {
@@ -200,7 +200,7 @@
             }
 
             th, td {
-                padding: 6px;
+                padding: 8px;
                 font-size: 12px;
             }
         }
@@ -217,27 +217,27 @@
     <div class="calculator-container">
         <div class="form-group">
             <label>Kredit miqdori:</label>
-            <input type="number" id="amount" min="0" step="1000" placeholder="Miqdorni kiriting" inputmode="decimal">
+            <input type="tel" id="amount" pattern="[0-9]*" inputmode="numeric" placeholder="Miqdorni kiriting">
         </div>
 
         <div class="form-group">
             <label>Boshlang'ich to'lov (%):</label>
-            <input type="number" id="downPayment" min="0" max="100" placeholder="Foizni kiriting" inputmode="decimal">
+            <input type="tel" id="downPayment" pattern="[0-9]*" inputmode="decimal" placeholder="Foizni kiriting">
         </div>
 
         <div class="form-group">
             <label>Kredit muddati (oy):</label>
-            <input type="number" id="term" min="1" placeholder="Oylar sonini kiriting" inputmode="numeric">
+            <input type="tel" id="term" pattern="[0-9]*" inputmode="numeric" placeholder="Oylar sonini kiriting">
         </div>
 
         <div class="form-group">
             <label>Yillik foiz stavkasi (%):</label>
-            <input type="number" id="rate" min="0" step="0.1" placeholder="Foiz stavkasini kiriting" inputmode="decimal">
+            <input type="tel" id="rate" pattern="[0-9]*" inputmode="decimal" placeholder="Foiz stavkasini kiriting">
         </div>
 
         <div class="form-group">
             <label>Imtiyoz davri (oy):</label>
-            <input type="number" id="gracePeriod" min="0" placeholder="Imtiyoz davrini kiriting" inputmode="numeric">
+            <input type="tel" id="gracePeriod" pattern="[0-9]*" inputmode="numeric" placeholder="Imtiyoz davrini kiriting">
         </div>
 
         <div class="form-group">
@@ -263,29 +263,19 @@
                 setTimeout(() => {
                     loadingScreen.style.display = 'none';
                 }, 500);
-            }, 3000);
+            }, 1000);
         });
-
-        // Prevent zoom on double tap
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
 
         function formatNumber(number) {
             return new Intl.NumberFormat('uz-UZ').format(number.toFixed(2));
         }
 
         function calculateLoan() {
-            const amount = parseFloat(document.getElementById('amount').value);
-            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value) || 0;
-            const term = parseInt(document.getElementById('term').value);
-            const annualRate = parseFloat(document.getElementById('rate').value);
-            const gracePeriod = parseInt(document.getElementById('gracePeriod').value) || 0;
+            const amount = parseFloat(document.getElementById('amount').value.replace(/[^0-9.]/g, ''));
+            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value.replace(/[^0-9.]/g, '')) || 0;
+            const term = parseInt(document.getElementById('term').value.replace(/[^0-9]/g, ''));
+            const annualRate = parseFloat(document.getElementById('rate').value.replace(/[^0-9.]/g, ''));
+            const gracePeriod = parseInt(document.getElementById('gracePeriod').value.replace(/[^0-9]/g, '')) || 0;
             const paymentType = document.getElementById('paymentType').value;
 
             if (!amount || !term || !annualRate) {
@@ -413,9 +403,11 @@
             `;
 
             document.getElementById('result').innerHTML = html;
-
-            // Scroll to results
-            document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+            
+            // Scroll to results smoothly
+            setTimeout(() => {
+                document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
     </script>
 </body>
