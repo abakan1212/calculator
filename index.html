@@ -1,414 +1,117 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kredit Kalkulyatori</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        }
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
-        body {
-            padding: 16px;
-            background-color: #f0f2f5;
-            min-height: 100vh;
-        }
+const RassrochkaCalculator = () => {
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [monthlyPayment, setMonthlyPayment] = useState('');
+  const [months, setMonths] = useState('');
+  const [result, setResult] = useState(null);
 
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('uz-UZ').format(price);
+  };
 
-        .loading-container {
-            width: 90%;
-            max-width: 300px;
-            position: relative;
-            text-align: center;
-        }
+  const calculateDifference = () => {
+    const price = parseFloat(originalPrice);
+    const monthly = parseFloat(monthlyPayment);
+    const period = parseInt(months);
 
-        .loading-image {
-            width: 100%;
-            height: auto;
-            object-fit: contain;
-        }
+    if (price && monthly && period) {
+      const totalPayment = monthly * period;
+      const difference = totalPayment - price;
+      const percentage = ((totalPayment / price - 1) * 100).toFixed(1);
 
-        .loading-text {
-            position: absolute;
-            bottom: 10%;
-            left: 0;
-            right: 0;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            font-size: 14px;
-        }
+      setResult({
+        originalPrice: price,
+        monthlyPayment: monthly,
+        months: period,
+        totalPayment,
+        difference,
+        percentage
+      });
+    }
+  };
 
-        .calculator-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    calculateDifference();
+  };
 
-        .form-group {
-            margin-bottom: 16px;
-        }
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-center">
+            Rassrochka Kalkulyatori
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Mahsulot narxi (so'm)
+              </label>
+              <input
+                type="number"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
+                required
+                min="0"
+              />
+            </div>
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #6c7278;
-            font-size: 14px;
-        }
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Oylik to'lov (so'm)
+              </label>
+              <input
+                type="number"
+                value={monthlyPayment}
+                onChange={(e) => setMonthlyPayment(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
+                required
+                min="0"
+              />
+            </div>
 
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #dfe1e5;
-            border-radius: 8px;
-            font-size: 16px;
-            background: white;
-            color: #333;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-        }
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Rassrochka muddati (oy)
+              </label>
+              <input
+                type="number"
+                value={months}
+                onChange={(e) => setMonths(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
+                required
+                min="1"
+              />
+            </div>
 
-        select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 30px;
-        }
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+            >
+              Hisoblash
+            </button>
+          </form>
 
-        input:focus, select:focus {
-            outline: none;
-            border-color: #3390ec;
-            box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.1);
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #3390ec;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background: #2982d8;
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        .table-container {
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            overflow-x: auto;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 600px;
-        }
-
-        th, td {
-            padding: 10px 8px;
-            text-align: right;
-            border: 1px solid #dfe1e5;
-            font-size: 13px;
-            background: #fff;
-        }
-
-        th {
-            background: #f7f9fc;
-            color: #6c7278;
-            font-weight: 500;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:nth-child(even) td {
-            background-color: #fafbfc;
-        }
-
-        .year-total {
-            font-weight: bold;
-        }
-
-        .year-total td {
-            background-color: #f0f0f0 !important;
-        }
-
-        .summary {
-            margin-top: 20px;
-            padding: 16px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .summary p {
-            margin-bottom: 12px;
-            color: #333;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .summary p:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Mobile optimizations */
-        @media (max-width: 480px) {
-            body {
-                padding: 12px;
-            }
-
-            .calculator-container {
-                max-width: 100%;
-            }
-
-            input, select, button {
-                font-size: 16px;
-            }
-
-            .summary {
-                padding: 12px;
-            }
-
-            th, td {
-                padding: 8px;
-                font-size: 12px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="loading" class="loading">
-        <div class="loading-container">
-            <img class="loading-image" src="https://raw.githubusercontent.com/abakan1212/calculator/refs/heads/main/KREDIT%20KALKULYATORI%20(2).svg" alt="Loading...">
-            <div class="loading-text">YUKLANMOQDA...</div>
-        </div>
+          {result && (
+            <div className="mt-6 space-y-2 bg-gray-50 p-4 rounded-md">
+              <h3 className="font-semibold text-lg mb-2">Natija:</h3>
+              <p>💰 Asl narx: {formatPrice(result.originalPrice)} so'm</p>
+              <p>💸 Oylik to'lov: {formatPrice(result.monthlyPayment)} so'm</p>
+              <p>📅 Muddat: {result.months} oy</p>
+              <p>💵 Jami to'lov: {formatPrice(result.totalPayment)} so'm</p>
+              <p>❗️ Ortiqcha to'lov: {formatPrice(result.difference)} so'm</p>
+              <p>📈 Ustama: {result.percentage}%</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
+};
 
-    <div class="calculator-container">
-        <div class="form-group">
-            <label>Kredit miqdori:</label>
-            <input type="tel" id="amount" pattern="[0-9]*" inputmode="numeric" placeholder="Miqdorni kiriting">
-        </div>
-
-        <div class="form-group">
-            <label>Boshlang'ich to'lov (%):</label>
-            <input type="tel" id="downPayment" pattern="[0-9]*" inputmode="decimal" placeholder="Foizni kiriting">
-        </div>
-
-        <div class="form-group">
-            <label>Kredit muddati (oy):</label>
-            <input type="tel" id="term" pattern="[0-9]*" inputmode="numeric" placeholder="Oylar sonini kiriting">
-        </div>
-
-        <div class="form-group">
-            <label>Yillik foiz stavkasi (%):</label>
-            <input type="tel" id="rate" pattern="[0-9]*" inputmode="decimal" placeholder="Foiz stavkasini kiriting">
-        </div>
-
-        <div class="form-group">
-            <label>Imtiyoz davri (oy):</label>
-            <input type="tel" id="gracePeriod" pattern="[0-9]*" inputmode="numeric" placeholder="Imtiyoz davrini kiriting">
-        </div>
-
-        <div class="form-group">
-            <label>To'lov turi:</label>
-            <select id="paymentType">
-                <option value="annuitet">Annuitet</option>
-                <option value="differential">Differentsial</option>
-            </select>
-        </div>
-
-        <button onclick="calculateLoan()">Hisoblash</button>
-
-        <div id="result"></div>
-    </div>
-
-    <script>
-        // Loading screen
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                const loadingScreen = document.getElementById('loading');
-                loadingScreen.style.opacity = '0';
-                loadingScreen.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 500);
-            }, 1000);
-        });
-
-        function formatNumber(number) {
-            return new Intl.NumberFormat('uz-UZ').format(number.toFixed(2));
-        }
-
-        function calculateLoan() {
-            const amount = parseFloat(document.getElementById('amount').value.replace(/[^0-9.]/g, ''));
-            const downPaymentPercent = parseFloat(document.getElementById('downPayment').value.replace(/[^0-9.]/g, '')) || 0;
-            const term = parseInt(document.getElementById('term').value.replace(/[^0-9]/g, ''));
-            const annualRate = parseFloat(document.getElementById('rate').value.replace(/[^0-9.]/g, ''));
-            const gracePeriod = parseInt(document.getElementById('gracePeriod').value.replace(/[^0-9]/g, '')) || 0;
-            const paymentType = document.getElementById('paymentType').value;
-
-            if (!amount || !term || !annualRate) {
-                alert('Iltimos, barcha zarur maydonlarni to\'ldiring!');
-                return;
-            }
-
-            const downPaymentAmount = (amount * downPaymentPercent) / 100;
-            const loanAmount = amount - downPaymentAmount;
-            const monthlyRate = annualRate / 12 / 100;
-
-            let payments = [];
-            let totalPayment = 0;
-            let totalInterest = 0;
-
-            if (paymentType === 'annuitet') {
-                const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / 
-                                     (Math.pow(1 + monthlyRate, term) - 1);
-
-                let remainingLoan = loanAmount;
-                
-                for (let month = 1; month <= term; month++) {
-                    const interestPayment = remainingLoan * monthlyRate;
-                    const principalPayment = month <= gracePeriod ? 0 : monthlyPayment - interestPayment;
-                    const payment = month <= gracePeriod ? interestPayment : monthlyPayment;
-                    
-                    if (month > gracePeriod) {
-                        remainingLoan -= principalPayment;
-                    }
-
-                    payments.push({
-                        month,
-                        payment,
-                        principal: principalPayment,
-                        interest: interestPayment,
-                        remaining: Math.max(0, remainingLoan)
-                    });
-
-                    totalPayment += payment;
-                    totalInterest += interestPayment;
-                }
-            } else {
-                const principalPayment = loanAmount / (term - gracePeriod);
-                let remainingLoan = loanAmount;
-
-                for (let month = 1; month <= term; month++) {
-                    const interestPayment = remainingLoan * monthlyRate;
-                    const currentPrincipal = month <= gracePeriod ? 0 : principalPayment;
-                    const payment = currentPrincipal + interestPayment;
-
-                    if (month > gracePeriod) {
-                        remainingLoan -= principalPayment;
-                    }
-
-                    payments.push({
-                        month,
-                        payment,
-                        principal: currentPrincipal,
-                        interest: interestPayment,
-                        remaining: Math.max(0, remainingLoan)
-                    });
-
-                    totalPayment += payment;
-                    totalInterest += interestPayment;
-                }
-            }
-
-            displayResults(payments, totalPayment, totalInterest, loanAmount, downPaymentAmount);
-        }
-
-        function displayResults(payments, totalPayment, totalInterest, loanAmount, downPaymentAmount) {
-            let html = '<div class="table-container"><table>';
-            html += '<tr><th>Oy</th><th>To\'lov</th><th>Asosiy qarz</th><th>Foiz</th><th>Qoldiq</th></tr>';
-
-            let yearlyTotals = {};
-            
-            payments.forEach(payment => {
-                const year = Math.ceil(payment.month / 12);
-                if (!yearlyTotals[year]) {
-                    yearlyTotals[year] = {
-                        payment: 0,
-                        principal: 0,
-                        interest: 0
-                    };
-                }
-                yearlyTotals[year].payment += payment.payment;
-                yearlyTotals[year].principal += payment.principal;
-                yearlyTotals[year].interest += payment.interest;
-
-                html += `
-                    <tr>
-                        <td>${payment.month}</td>
-                        <td>${formatNumber(payment.payment)}</td>
-                        <td>${formatNumber(payment.principal)}</td>
-                        <td>${formatNumber(payment.interest)}</td>
-                        <td>${formatNumber(payment.remaining)}</td>
-                    </tr>
-                `;
-
-                if (payment.month % 12 === 0 || payment.month === payments.length) {
-                    const yearTotal = yearlyTotals[year];
-                    html += `
-                        <tr class="year-total">
-                            <td>${year}-yil jami:</td>
-                            <td>${formatNumber(yearTotal.payment)}</td>
-                            <td>${formatNumber(yearTotal.principal)}</td>
-                            <td>${formatNumber(yearTotal.interest)}</td>
-                            <td>-</td>
-                        </tr>
-                    `;
-                }
-            });
-
-            html += '</table></div>';
-
-            html += `
-                <div class="summary">
-                    <p>Kredit miqdori: ${formatNumber(loanAmount + downPaymentAmount)}</p>
-                    <p>Boshlang'ich to'lov: ${formatNumber(downPaymentAmount)}</p>
-                    <p>Sof kredit miqdori: ${formatNumber(loanAmount)}</p>
-                    <p>Jami to'lov: ${formatNumber(totalPayment)}</p>
-                    <p>Jami foiz to'lovi: ${formatNumber(totalInterest)}</p>
-                    <p>Umumiy to'lov (Kredit + Foiz): ${formatNumber(totalPayment + downPaymentAmount)}</p>
-                </div>
-            `;
-
-            document.getElementById('result').innerHTML = html;
-            
-            // Scroll to results smoothly
-            setTimeout(() => {
-                document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        }
-    </script>
-</body>
-</html>
+export default RassrochkaCalculator;
